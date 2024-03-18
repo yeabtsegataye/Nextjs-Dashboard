@@ -2,6 +2,8 @@
 import { z } from 'zod';
 import { sql } from '@vercel/postgres';
 import { revalidatePath } from 'next/cache';
+import { signIn } from '../auth';
+import { AuthError } from 'next-auth';
 // we inserted new data so we have to revalidate the data or replace the cache
 import { redirect } from 'next/navigation';
 
@@ -66,7 +68,26 @@ export type State = {
   };
   message?: string | null;
 };
- 
+/////////////
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+  try {
+    await signIn('credentials', formData);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case 'CredentialsSignin':
+          return 'Invalid credentials.';
+        default:
+          return 'Something went wrong.';
+      }
+    }
+    throw error;
+  }
+}
+//////////////
 export async function createInvoice(prevState: State, formData: FormData) {
   // Validate form using Zod
   const validatedFields = CreateInvoice.safeParse({
